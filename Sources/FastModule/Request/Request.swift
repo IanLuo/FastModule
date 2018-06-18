@@ -91,9 +91,20 @@ public struct Request: ExpressibleByStringLiteral {
         var request = Request(stringLiteral: requestPattern)
         
         let keys = request.action.requestPatternKeys
-        
-        guard keys.count <= arguments.count
-            else { fatalError("not enough arguments. key placeholders((\(keys.count)), arguments(\(arguments.count)") }
+        var arguments = arguments
+        if keys.count > arguments.count {
+            let keysInParameter = (request.parameters ?? [:]).keys
+            for (index, mappedKey) in keys.enumerated() {
+                if keysInParameter.contains(mappedKey) {
+                    if let v = request.parameters![mappedKey] {
+                        arguments.insert(v, at: index)
+                    }
+                }
+            }
+            if arguments.count < keys.count {
+                fatalError("not enough arguments. key placeholders((\(keys.count)), arguments(\(arguments.count)")
+            }
+        }
         
         for (index, key) in keys.enumerated() {
             request[key] = arguments[index]
@@ -202,6 +213,45 @@ extension Request: CustomDebugStringConvertible {
         Request content: \n app: \(app) \n module: \(module) \n
         action: \(action) \n parameters: \(parameters ?? [:])
         """
+    }
+}
+
+internal let keyDispose = "keyDispose"
+private let keyIsCanceld = "keyIsCanceld"
+extension Request {
+    
+    /// mark the status
+    public var isCanceld: Bool {
+        set { storage[keyIsCanceld] = newValue}
+        get { return storage[keyIsCanceld] as? Bool ?? false }
+    }
+    
+    /// triger request to complete
+    internal mutating func cancel() {
+        if !isCanceld {
+            disposeAction?.forEach { $0() }
+            self.isCanceld = true
+        }
+    }
+    
+    public func disposeWork(_ action: @escaping () -> Void) -> Request {
+        var r = self
+        r.addDisposeWork(action)
+        return r
+    }
+    
+    private mutating func addDisposeWork(_ action: @escaping () -> Void) {
+        if var disposeAction = disposeAction {
+            disposeAction.append(action)
+            self.disposeAction = disposeAction
+        } else {
+            self.disposeAction = [action]
+        }
+    }
+    
+    internal var disposeAction: ([() -> Void])? {
+        set { storage[keyDispose] = newValue }
+        get { return storage[keyDispose] as? [() -> Void] }
     }
 }
 

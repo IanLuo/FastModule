@@ -41,8 +41,8 @@ public class TestModule: Module {
         routeHandler = UIViewController()
         self.request = request
         
-        bindAction(pattern: "loadData/:name") { (_, responder, _) in
-            let value = requestData(name: "loadData/#name", param: "joe", default: "")
+        bindAction(pattern: "loadData/:name") { [weak self] (_, responder, _) in
+            let value = self?.requestData(name: "loadData/#name", param: "joe", default: "")
             responder.success(value: value)
         }
         

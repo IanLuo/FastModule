@@ -11,23 +11,63 @@ import UIKit
 
 public enum ExecutionError: Error {
     case actionMissing
+    case canceled
 }
 
 private let keyBindings = "bindings"
 
-public struct ActionResponder {
+public class ActionResponder {
     internal let callback: (Event.Result<Any?>) -> Void
     
+    internal var isCanceld: Bool = false
+    
+    internal var onCancelAction: (() -> Void)? = nil
+    
+    internal init(request: Request, callback: @escaping (Event.Result<Any?>) -> Void) {
+        self.callback = callback
+        
+        /// get mapped obj, multiple request with the same pattern will map to the same obj
+        var obj = notificationObjectMap[request.pattern]
+        
+        // if no obj mapped, create one and save the mapping
+        if obj == nil {
+            obj = NSObject()
+            notificationObjectMap[request.pattern] = obj
+        }
+        
+        // add the cancel observer
+        NotificationCenter.default.addObserver(self,
+                                               selector: #selector(didCancel),
+                                               name: NSNotification.Name(keyCancelRequestNotification),
+                                               object: obj)
+    }
+    
+    deinit {
+        // release cancel observer
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc private func didCancel() {
+        isCanceld = true
+        callback(Event.Result.failure(ExecutionError.canceled))
+        onCancelAction?()
+    }
+    
+    /// call this function if the binding action execute successfully, pass the obj to the caller
     public func success(value: Any?) {
+        guard !isCanceld else { return }
         callback(Event.Result.success(value))
     }
 
+    /// call this function if the execution fails, pass the error obj
     public func failure(error: Error) {
+        guard !isCanceld else { return }
         callback(Event.Result.failure(error))
     }
     
-    public func result(_ result: Event.Result<Any?>) {
-        callback(result)
+    /// if there's an canceling action to the binding execution action, pass the action with this function
+    public func onCancel(_ action: @escaping () -> Void) {
+        onCancelAction = action
     }
 }
 
@@ -43,18 +83,32 @@ public protocol Executable {
     func update(properties: [String: Any]) -> Module
         
     func bindAction(pattern: String,
-                    callback: ([String: Any], ActionResponder, Request) -> Void)
+                    callback: @escaping ([String: Any], ActionResponder, Request) -> Void)
 }
 
+private let keyCancelRequestNotification = "keyCancelRequestNotification"
+
+/// used to map request pattern to request
+private var notificationObjectMap: [String: Any] = [:]
+
 extension Module {
+    public func dispose(request: Request) {
+        /// do dispose action when binding action done
+        request.disposeAction?.forEach { $0() }
+        
+        // notify responder to perfom action when cancel fires
+        NotificationCenter.default.post(name: NSNotification.Name(keyCancelRequestNotification), object: notificationObjectMap[request.pattern])
+    }
+    
     @discardableResult
     public func execute<Type>(request: Request,
                               type t: Type.Type,
                               callback: @escaping (Event.Result<Type>) -> Void) -> Module {
-        let actionResponder = ActionResponder(callback: { [weak self] in
+        
+        let actionResponder = ActionResponder(request: request, callback: { [weak self] in
             switch $0 {
             case .failure(let error):
-                print("ERROR: \(error), pattern: \(request.action), module: \(type(of: self as! Module).identifier)")
+                print("ERROR: \(error), pattern: \(request.action), module: \(type(of: self! as Module).identifier)")
                 callback(.failure(error))
                 self?.raiseError(action: request.action,
                                  error: error)
@@ -76,7 +130,7 @@ extension Module {
             }
         } else {
             if request.action.count > 0 {
-                print("warning: No handler for \(request.action), module: \(type(of: self as! Module).identifier)")
+                print("warning: No handler for \(request.action), module: \(type(of: self as Module).identifier)")
             }
         }
         
@@ -113,7 +167,7 @@ extension Module {
 
 extension Module {
     public func bindAction(pattern: String,
-                           callback: ([String: Any], ActionResponder, Request) -> Void) {
+                           callback: @escaping ([String: Any], ActionResponder, Request) -> Void) {
         if var bindings = property(key: keyBindings,
                                    type: [String].self) {
             bindings.append(pattern)
@@ -213,5 +267,20 @@ extension ModuleContext {
                             handler(result)
             })
         }
+    }
+}
+
+/// convinient functions for getting value from binding action
+extension Dictionary where Key == String, Value == Any {
+    public func required<T>(_ key: String, type: T.Type) throws -> T {
+        guard let v = self[key] as? T else {
+            throw ModuleError.missingParameter(key)
+        }
+        
+        return v
+    }
+    
+    public func optional<T>(_ key: String, type: T.Type, default: T? = nil) -> T? {
+        return self[key] as? T
     }
 }
