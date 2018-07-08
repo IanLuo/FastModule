@@ -10,11 +10,11 @@ import Foundation
 @testable import FastModule
 import XCTest
 
-private enum TestError: Error {
-    case TestError
-}
-
 public class TestModule: Module {
+    public struct Actions {
+        let loadData: LoadData
+    }
+    
     public var viewController: UIViewController {
         return UIViewController()
     }
@@ -22,14 +22,6 @@ public class TestModule: Module {
     public var routeHandler: UIViewController!
     
     public var childrenModules: [Module]?
-    
-    public func handleAction(request: Request, responder: ActionResponder) {
-        switch request.action {
-        case "loadData":
-            loadData(parameter: request.parameters, result: responder)
-        default: break
-        }
-    }
     
     public static var identifier: String = "test"
     

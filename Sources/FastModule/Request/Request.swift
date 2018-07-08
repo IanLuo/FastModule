@@ -8,12 +8,20 @@
 
 import Foundation
 
-private struct Constants {
-    static let keyApp = "keyApp"
-    static let keyModlule = "keyModlule"
-    static let keyAction = "keyAction"
-    static let keyPriority = "keyPriority"
-    static let keyParameters = "keyParameters"
+//private struct Constants {
+//    static let keyApp = "keyApp"
+//    static let keyModlule = "keyModlule"
+//    static let keyAction = "keyAction"
+//    static let keyPriority = "keyPriority"
+//    static let keyParameters = "keyParameters"
+//}
+
+public struct Meta {
+    let app: String
+    let module: String
+    let action: String
+    let priority: Int
+    let parameters: [String: Any]
 }
 
 /// 模块的一个操作，被封装为一个请求。
@@ -35,11 +43,11 @@ public struct Request: ExpressibleByStringLiteral {
         let urlString = value.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlPathAllowed.union(.urlHostAllowed).union(.urlQueryAllowed).union(.urlFragmentAllowed)) ?? ""
 
         if let url = URL(string: urlString) {
-            storage[ModuleContext.Priority.key] = ModuleContext.Priority.default
+            storage[\Meta.priority] = ModuleContext.Priority.default
             storage[ModuleContext.InstanceStyle.key] = ModuleContext.InstanceStyle.default
-            storage[Constants.keyApp] = url.scheme ?? "local"
-            storage[Constants.keyModlule] = url.host
-            storage[Constants.keyAction] = url.path.dropHead { $0 == "/" }
+            storage[\Meta.app] = url.scheme ?? "local"
+            storage[\Meta.module] = url.host
+            storage[\Meta.parameters] = url.path.dropHead { $0 == "/" }
             
             url.query?
                 .components(separatedBy: "&")
@@ -116,26 +124,32 @@ public struct Request: ExpressibleByStringLiteral {
                   parameter: request.parameters)
     }
     
-    private var storage: [String : Any] = [:]
+    private var storage: [AnyHashable : Any] = [:]
+    
+    public func meta<T>(_ keyPath: KeyPath<Meta, T>) -> T {
+        guard let metaValue = storage[keyPath] as? T else { assert(false) }
+        
+        return metaValue
+    }
     
     /// app scheme
     public var app: String {
-        return storage[Constants.keyApp] as? String ?? ""
+        return meta(\.app)
     }
     
     /// module id
     public var module: String {
-        return storage[Constants.keyModlule] as? String ?? ""
+        return meta(\.module)
     }
     
     /// 请求的 action 名，对应到 module 的一个相应请求的方法
     public var action: String {
-        return storage[Constants.keyAction] as? String ?? ""
+        return meta(\.action)
     }
     
     /// 一个请求的参数
     public var parameters: [String : Any]? {
-        return storage[Constants.keyParameters] as? [String : Any]
+        return meta(\.parameters)
     }
     
     /// 请求对应模块的优先级，将会调度到不小于这个优先级的 module 最接近的一个
@@ -162,18 +176,18 @@ public struct Request: ExpressibleByStringLiteral {
     /// 获取请求参数
     public subscript(key: String) -> Any? {
         set {
-            if storage[Constants.keyParameters] == nil {
+            if storage[\Meta.parameters] == nil {
                 if let newValue = newValue {
                     let params: [String : Any] = [key: newValue as Any]
-                    storage[Constants.keyParameters] = params
+                    storage[\Meta.parameters] = params
                 }
             } else {
-                var params: [String : Any]? = storage[Constants.keyParameters] as? [String : Any]
+                var params: [String : Any]? = storage[\Meta.parameters] as? [String : Any]
                 params?[key] = newValue
-                storage[Constants.keyParameters] = params
+                storage[\Meta.parameters] = params
             }
         }
-        get { return (storage[Constants.keyParameters] as? [String : Any])?[key] }
+        get { return (storage[\Meta.parameters] as? [String : Any])?[key] }
     }
 }
 
