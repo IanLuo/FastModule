@@ -9,8 +9,9 @@
 import Foundation
 
 public let dynamicNameModule = "~module"
-public let dynamicNameLayoutableModule = "~layoutable"
-public let dynamicNameRoutableModule = "~routable"
+
+public let keyActionBindInjectedBindings = "bind-the-injected-bindings"
+public let keyParameterActionBindInjectedBindingsGeneralActions = "generatorAction"
 
 open class DynamicModule: Module {
     open class var identifier: String { return dynamicNameModule }
@@ -23,9 +24,10 @@ open class DynamicModule: Module {
         instanceIdentifier = request.module
     }
     
+    /// 子类重写这个方法，根据需要执行不同的绑定操作
     open func binding() {
-        bindAction(pattern: "bind-the-injected-bindings") { [weak self] (parameter, responder, request) in
-            if let generatorAction = parameter.value("generatorAction", type: ((Module) -> Void).self) {
+        bindAction(pattern: keyActionBindInjectedBindings) { [weak self] (parameter, responder, request) in
+            if let generatorAction = parameter.value(keyParameterActionBindInjectedBindingsGeneralActions, type: ((Module) -> Void).self) {
                 guard let strongSelf = self else { return }
                 generatorAction(strongSelf)
             }
@@ -43,7 +45,7 @@ private struct ModuleDescriptor: DynamicModuleDescriptorProtocol {
     
     public func request(request: Request) -> Request {
         var newRequest = request
-        newRequest["generatorAction"] = generatorAction
+        newRequest[keyParameterActionBindInjectedBindingsGeneralActions] = generatorAction
         return newRequest
     }
     
