@@ -8,8 +8,7 @@
 
 import Foundation
 
-/// 一个 Request 的响应，封装到 Event 中
-/// - Event 有两种状态，分别是成功和失败
+/// Raw content of an Request
 public struct Event {
     public enum Result<Type> {
         case success(Type)

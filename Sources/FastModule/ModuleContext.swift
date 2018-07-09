@@ -33,12 +33,6 @@ public struct ModuleContext {
             return t.reduce(first, { last, next in
                 return last.routePriority < next.routePriority ? last : next
             })
-        } else if (request.module.hasPrefix(dynamicNameModule)) {
-            return (content[dynamicNameModule] as? [Module.Type])?.first
-        } else if (request.module.hasPrefix(dynamicNameLayoutableModule)) {
-            return (content[dynamicNameLayoutableModule] as? [Module.Type])?.first
-        } else if (request.module.hasPrefix(dynamicNameRoutableModule)) {
-            return (content[dynamicNameRoutableModule] as? [Module.Type])?.first
         }
         
         return nil
@@ -75,7 +69,7 @@ public struct ModuleContext {
                 external.initailBindingActions()
             }
             
-            // 如果实现了 DynamicModule，执行b默认的绑定操作，将作为参数传入的绑定行为，添加到模块中
+            // 如果实现了 DynamicModule，执行默认的绑定操作，将作为参数传入的绑定行为，添加到模块中
             if instance is DynamicModule {
                 instance.fire(request: Request(path: "bind-the-injected-bindings", parameter: request.parameters))
             }
@@ -114,9 +108,12 @@ public struct ModuleContext {
     
     public static func register(identifier: String, type inType: Module.Type) {
         if let types = content[identifier] as? [Module.Type] {
+            
+            // if identifier and routePriority is the same, ignore this registering call
             for case let sameType in types where sameType.routePriority == inType.routePriority {
                 return
             }
+            
             var newTypes = types
             newTypes.append(inType)
             content[identifier] = newTypes

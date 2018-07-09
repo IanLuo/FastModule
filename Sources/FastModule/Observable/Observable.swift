@@ -42,9 +42,13 @@ public protocol Observeable {
                                     `default`: Result) -> Result
 }
 
-/// 保存 module 的监听对象引用，不持有 module 和监听对象的
+///  keep observer and module mapping, won't increse retain count
 private class ModuleObserverMapper {
+    
+    /// one module observer context stands for one module instance and multiple observers
     private class ModuleObserverContext {
+        
+        /// store one key-observer data for one specific module instanc, the life-cycle is based on module instance
         private var observersMap: [String : [(Event) -> Any?]] = [:]
         fileprivate func add(key: String, newObserver: @escaping (Event) -> Any?) {
             if let observers = observersMap[key] {
@@ -67,7 +71,7 @@ private class ModuleObserverMapper {
                 observables.append(contentsOf: wildCard)
             }
             
-            // 如果 key 中包含 / 符号，则表示需要通知的 key 可能是带有 :key 格式参数占位符的，需要进行匹配, 否则直接对 key 取值
+            // check if there is need to match a pattern
             if key.contains("/") {
                 matchedKeys(notifyKey: key).forEach {
                     if let o = observersMap[$0] {
@@ -83,6 +87,7 @@ private class ModuleObserverMapper {
             }
         }
         
+        /// find if a pattern is registered, return any matched keys
         private func matchedKeys(notifyKey: String) -> [String] {
             var matched: [String] = []
             observersMap.keys.forEach {
@@ -94,8 +99,11 @@ private class ModuleObserverMapper {
         }
     }
     
+    /// the data structure that holds a mapping from observer key to a module, if the module which is observing released, the mapping is removed
     private static var moduleObserverMapperContent = NSMapTable<AnyObject, ModuleObserverContext>.weakToStrongObjects()
     
+    /// add an obserser with key to a module
+    /// key and observer is one-to-many
     func addObserver(module: AnyObject,
                      key: String,
                      observer: @escaping (Event) -> Any?) {
@@ -111,12 +119,14 @@ private class ModuleObserverMapper {
         }
     }
     
+    /// find all observers registerd with key on module
     func observers(for key: String,
                    in module: AnyObject) -> [(Event) -> Any?]? {
         return ModuleObserverMapper.moduleObserverMapperContent.object(forKey: module)?.observer(for: key)
     }
 }
 
+/// Global only instance to store module-observer mapping
 private struct ObserverContext {
     fileprivate static let moduleObserveMapper = ModuleObserverMapper()
 }

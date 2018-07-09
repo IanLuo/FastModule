@@ -72,16 +72,21 @@ public class ActionResponder {
 }
 
 public protocol Executable {
+
+    /// same as `bindAction` with no callback
     @discardableResult
     func fire(request: Request) -> Module
     
+    /// same as `bindAction` with no callback
     @discardableResult
     func fire(requestPattern: String,
               arguments: Any...) -> Module
     
+    /// update specifiled property, and notify all observers, won't hit binded action
     @discardableResult
     func update(properties: [String: Any]) -> Module
-        
+    
+    /// execute the binded action, and notify all observers
     func bindAction(pattern: String,
                     callback: @escaping ([String: Any], ActionResponder, Request) -> Void)
 }
@@ -92,6 +97,7 @@ private let keyCancelRequestNotification = "keyCancelRequestNotification"
 private var notificationObjectMap: [String: Any] = [:]
 
 extension Module {
+    /// trigger any cancelation and dispose action for an execution
     public func dispose(request: Request) {
         /// do dispose action when binding action done
         request.disposeAction?.forEach { $0() }

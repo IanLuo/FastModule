@@ -50,6 +50,8 @@ private struct ModuleDescriptor: DynamicModuleDescriptorProtocol {
     }
     
     public func instance(request: Request) -> Module {
+        // auto register for dynamic module
+        ModuleContext.register(identifier: request.module, type: DynamicModule.self)
         return ModuleContext.request(self.request(request: request))
     }
 }
