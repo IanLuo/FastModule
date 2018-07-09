@@ -28,7 +28,6 @@ private struct TestDynamicModuleClass: DynamicModuleTemplate {
 public class TestDynamicModule: XCTestCase {
     func testCreateDynamicModule() {
         var isHit = false
-        DynamicModule.register()
         ModuleContext.request(TestDynamicModuleClass.request(name: "test", pattern: "action", arguments: "what the parameter is"), callbackType: String.self) {
             XCTAssertEqual("ohhhhhhhh", $0.value)
             isHit = true

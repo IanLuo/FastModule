@@ -44,6 +44,7 @@ private struct ModuleDescriptor: DynamicModuleDescriptorProtocol {
     }
     
     public func request(request: Request) -> Request {
+        ModuleContext.register(identifier: request.module, type: DynamicModule.self)
         var newRequest = request
         newRequest[keyParameterActionBindInjectedBindingsGeneralActions] = generatorAction
         return newRequest
@@ -51,7 +52,6 @@ private struct ModuleDescriptor: DynamicModuleDescriptorProtocol {
     
     public func instance(request: Request) -> Module {
         // auto register for dynamic module
-        ModuleContext.register(identifier: request.module, type: DynamicModule.self)
         return ModuleContext.request(self.request(request: request))
     }
 }

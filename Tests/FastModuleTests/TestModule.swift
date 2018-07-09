@@ -11,8 +11,8 @@ import Foundation
 import XCTest
 
 public class TestModule: Module {
-    public struct Actions {
-        let loadData: LoadData
+    enum TestError: Error {
+        case error
     }
     
     public var viewController: UIViewController {
@@ -45,7 +45,7 @@ public class TestModule: Module {
     
     private func loadData(parameter: [String : Any]?, result: ActionResponder) {
         result.success(value: "execute complete")
-        result.failure(error: TestError.TestError)
+        result.failure(error: TestError.error)
     }
     
     private func grayscal(parameter: [String : Any]?, result: ActionResponder) {
