@@ -46,32 +46,33 @@ public struct ModuleContext {
         let createInstance: (Module.Type) -> Module = {
             let instance = $0.init(request: request)
             
-            // 执行静态模块的默认初始化方法
+            // static module custom init
             instance.didInit()
             
-            // 执行静态模块的绑定方法
+            // static module custom binding
             instance.binding()
             
-            // 获取初始化时通过 property 传入的参数，添加到 parameter 中
-            instance.bindAction(pattern: "instatiate-properties/:properties") { (parameter, responder, request) in
-                guard let properties = parameter[":properties"] as? [String: Any] else {
-                    responder.failure(error: ModuleError.missingParameter(":properties"))
-                    return
+            // all modules by default will bind this action, as the `property` functionality, don't request this action directly, use Observable.update(properties: [String: Any]) to update properties
+            instance.bindAction(pattern: "instatiate-properties/:properties") { [weak instance] (parameter, responder, request) in
+
+                do {
+                    let properties = try parameter.required(":properties", type: [String: Any].self)
+                    // set all property to module
+                    properties.forEach { instance?[$0.key] = $0.value }
+                } catch {
+                    responder.failure(error: error)
                 }
                 
-                properties.forEach {
-                    instance[$0.key] = $0.value
-                }
             }
 
-            // 如果实现了 ExtrernalType，执行额外的初始化操作
+            // extral initialization for `ExternalType` module
             if let external = instance as? ExternalType {
                 external.initailBindingActions()
             }
             
-            // 如果实现了 DynamicModule，执行默认的绑定操作，将作为参数传入的绑定行为，添加到模块中
+            // initialization for dynamic module
             if instance is DynamicModule {
-                instance.fire(request: Request(path: "bind-the-injected-bindings", parameter: request.parameters))
+                instance.fire(request: Request(path: keyActionBindInjectedBindings, parameter: request.parameters))
             }
             
             return instance

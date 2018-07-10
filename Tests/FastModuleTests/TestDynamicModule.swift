@@ -28,11 +28,15 @@ private struct TestDynamicModuleClass: DynamicModuleTemplate {
 public class TestDynamicModule: XCTestCase {
     func testCreateDynamicModule() {
         var isHit = false
-        ModuleContext.request(TestDynamicModuleClass.request(name: "test", pattern: "action", arguments: "what the parameter is"), callbackType: String.self) {
-            XCTAssertEqual("ohhhhhhhh", $0.value)
-            isHit = true
-        }
+        TestDynamicModuleClass
+            .instance(name: "test", pattern: "")
+            .observeValue(action: "action", type: String.self) {
+                XCTAssertEqual("ohhhhhhhh", $0)
+                isHit = true
+            }
+            .fire(requestPattern: "action")
         
         XCTAssertTrue(isHit)
     }
 }
+
