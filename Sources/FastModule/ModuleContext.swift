@@ -86,8 +86,9 @@ public struct ModuleContext {
             if let instance = SingletonSinstanceMap.map[request.module] {
                 return instance
             } else {
-                SingletonSinstanceMap.map[request.module] = createInstance(type)
-                return self.request(request)
+                let newInstance = createInstance(type)
+                SingletonSinstanceMap.map[request.module] = newInstance
+                return newInstance
             }
         }
     }
