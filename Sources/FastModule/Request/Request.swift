@@ -192,12 +192,11 @@ public struct Request: ExpressibleByStringLiteral {
 }
 
 extension Request {
-    public func bindAction(_ actionPattern: String, callback: ([String: Any]) -> Void) {
-        if actionPattern.matchActionBinding(string: action) {
-            callback(resolveParameters(for: actionPattern))
-        }
-    }
-    
+    /// convert request pattern into dictionary
+    /// for example:
+    /// if a request pattern comes in as: /some-action/#param1/#param2
+    /// with a param list [value1, value2]
+    /// the resule will be [":param1": value1, ":param2": value2, "#param1": value1, "#param2": value2]
     public func resolveParameters(for pattern: String) -> [String: Any] {
         var params: [String: Any] = [:]
         parameters?.forEach {
@@ -208,7 +207,9 @@ extension Request {
         for (index, value) in action.extractBindingValues(binding: pattern).enumerated() {
             switch value {
             case let (value) where value is String && (value as! String).hasPrefix("#"):
+                // get the passed in value for passed in place holder variable(start with '#')
                 if let value = params[(value as! String)] {
+                    // append with binded pattern param key to result dictionary(start with ':')
                     params[patternKeys[index]] = value
                 } else {
                     fallthrough

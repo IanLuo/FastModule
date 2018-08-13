@@ -28,6 +28,8 @@ public protocol Module: class, ModuleType {
     /// 模块路由优先级, 相同 identifier 的模块通过优先级来决定路由对象
     static var routePriority: Int { get }
     
+    var instanceIdentifier: String { get }
+    
     init(request: Request)
     
     static func register()
@@ -126,5 +128,17 @@ extension Module {
     
     public static func instance(action: String? = nil) -> Module {
         return ModuleContext.request(self.request(action: action)) as! Self
+    }
+}
+
+extension Module {
+    /// retrive the instance identifier of the current module instance
+    public var instanceIdentifier: String {
+        if let instanceID = property(key: "keyInstanceIdentifer", type: String.self) {
+            return instanceID
+        } else {
+            self.setProperty(key: "keyInstanceIdentifer", value: UUID().uuidString)
+            return instanceIdentifier
+        }
     }
 }

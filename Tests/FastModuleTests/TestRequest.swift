@@ -10,24 +10,20 @@ import Foundation
 import XCTest
 
 public class TestRequest: XCTestCase {
-    func testBindAction() {
+    func testResolveParameters() {
         let request = Request(stringLiteral: "//usermanager/login/myname/mypassword")
         
         var isHit = false
-        request.bindAction("login/:username/:password") { params in
-            isHit = true
-            
-            XCTAssertEqual("myname", params[":username"] as! String)
-            XCTAssertEqual("mypassword", params[":password"] as! String)
-        }
+        var params = request.resolveParameters(for: "login/:username/:password")
+        
+        XCTAssertEqual("myname", params[":username"] as! String)
+        XCTAssertEqual("mypassword", params[":password"] as! String)
 
         XCTAssertTrue(isHit)
 
         isHit = false
-        request.bindAction("login/:name/mypassword") {
-            XCTAssertEqual("myname", $0[":name"] as! String)
-            isHit = true
-        }
+        params = request.resolveParameters(for: "login/:name/mypassword")
+        XCTAssertEqual("myname", params[":name"] as! String)
         
         XCTAssertTrue(isHit)
     }
@@ -44,25 +40,15 @@ public class TestRequest: XCTestCase {
         XCTAssertEqual(request.instanceStyle, ModuleContext.InstanceStyle.singleton)
         XCTAssertEqual(request.priority, 2)
 
-        var isHit = false
-        request.bindAction("login/:username/:password/:image") {
-            XCTAssertEqual($0[":username"] as! String, "some body")
-            XCTAssertEqual($0[":password"] as! String, "extreamly complex password")
-            XCTAssertEqual($0[":image"] as! UIImage, image)
-            isHit = true
-        }
+        var param = request.resolveParameters(for: "login/:username/:password/:image")
+        XCTAssertEqual(param[":username"] as! String, "some body")
+        XCTAssertEqual(param[":password"] as! String, "extreamly complex password")
+        XCTAssertEqual(param[":image"] as! UIImage, image)
         
-        XCTAssertTrue(isHit)
-        
-        isHit = false
-        request.bindAction("login/:username/:password") {
-            XCTAssertEqual($0["username"] as! String, "some body")
-            XCTAssertEqual($0["password"] as! String, "extreamly complex password")
-            XCTAssertEqual($0["image"] as! UIImage, image)
-            isHit = true
-        }
-        
-        XCTAssertFalse(isHit)
+        param = request.resolveParameters(for: "login/:username/:password")
+        XCTAssertEqual(param["username"] as! String, "some body")
+        XCTAssertEqual(param["password"] as! String, "extreamly complex password")
+        XCTAssertEqual(param["image"] as! UIImage, image)
     }
     
     func testURLinRequestParameter() {

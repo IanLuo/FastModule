@@ -114,6 +114,14 @@ public class ModuleBasicTests: XCTestCase {
         }
     }
     
+    func testShowBindedActions() {
+        TestModule.register()
+        
+        let module = TestModule.instance()
+        
+        print(module.bindedActions)
+    }
+    
 //    func testRouter() {
 //        TestModule.register()
 //        

@@ -126,6 +126,8 @@ extension Module {
             }
         })
         
+        // find callback closue for the binded action, with matches the request action
+        // for example: /some-action/#param1/#param with match '/some-action/:p1/:p2'
         if let matchedBindingPattern = findBindedPattern(request: request) {
             let parameters = request.resolveParameters(for: matchedBindingPattern)
             if let binding = property(key: matchedBindingPattern,
@@ -143,6 +145,7 @@ extension Module {
         return self
     }
     
+    /// retrive a binded pattern for request, nil if there's none found
     private func findBindedPattern(request: Request) -> String? {
         for pattern in property(key: keyBindings,
                                 type: [String].self) ?? [] {
@@ -288,5 +291,12 @@ extension Dictionary where Key == String, Value == Any {
     
     public func optional<T>(_ key: String, type: T.Type, default: T? = nil) -> T? {
         return self[key] as? T
+    }
+}
+
+extension Module {
+    /// retrive all binded action names
+    public var bindedActions: [String]? {
+        return property(key: keyBindings, type: [String: Any].self)?.map { $0.key }
     }
 }

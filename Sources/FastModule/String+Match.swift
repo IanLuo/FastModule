@@ -40,6 +40,7 @@ extension String {
         }
     }
     
+    /// for example: /some-action/:param1/:param2
     internal var bindingActionPattern: String {
         var regexPattern = self.components(separatedBy: "/")
             .map { (item: String) -> String in
@@ -57,6 +58,7 @@ extension String {
         return "^\(regexPattern)$"
     }
 
+    /// for example: /some-action/#param1/#param2
     internal var requestActionPattern: String {
         var regexPattern = self.components(separatedBy: "/")
             .map { (item: String) -> String in
